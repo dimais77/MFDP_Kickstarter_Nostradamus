@@ -17,6 +17,22 @@ services:
     depends_on:
       - app
       - db
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_DEFAULT_USER}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_DEFAULT_PASS}
+    ports:
+      - "15672:15672"
+      - "5672:5672"
+    volumes:
+      - ./rabbitmq/mount:/var/lib/rabbitmq
+    env_file:
+      - ./rabbitmq/.env
+    restart: on-failure
+
+
   db:
     image: postgres:16-alpine
     volumes:
@@ -27,3 +43,17 @@ services:
       - POSTGRES_USER=${POSTGRES_USER}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
       - POSTGRES_DB=sa
+
+  worker:
+    build: ./app/
+    image: worker
+    environment:
+      RABBITMQ_USER: ${RABBITMQ_USER}
+      RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD}
+      RABBITMQ_HOST: ${RABBITMQ_HOST}
+    restart: always
+    volumes:
+      - ./app:/app
+    working_dir: /app
+    env_file:
+      - ./app/.env
