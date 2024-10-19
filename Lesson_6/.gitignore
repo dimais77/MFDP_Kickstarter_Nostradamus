@@ -1,0 +1,10 @@
+.DS_Store
+.idea/
+postgres_data/*
+!postgres_data/.gitkeep
+rabbitmq/*
+!rabbitmq/.gitkeep
+app/data/*
+!app/data/.gitkeep
+**/__pycache__/
+**/.env

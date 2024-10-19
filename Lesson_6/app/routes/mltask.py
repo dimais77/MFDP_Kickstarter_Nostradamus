@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException, Depends
 from models.mltask import MLTask
-from models.wineparams import WineParams
+from models.project_params import ProjectParams
 from services.crud import mltask as MLTaskService
 from services.crud import mlmodel as MLModelService
 from services.crud import user as UserService
@@ -24,7 +24,7 @@ async def get_task_by_id(task_id: int, session=Depends(get_session)):
 
 
 @mltask_router.post('/newtask')
-async def create_task(user_id: int, model_id: int, input_data: WineParams,
+async def create_task(user_id: int, model_id: int, input_data: ProjectParams,
                       session=Depends(get_session)):
     mlmodel = MLModelService.get_model_by_id(model_id, session)
     logging.info(f"create_task ---- mlmodel==={mlmodel}")

@@ -40,9 +40,9 @@ def predict_callback(ch, method, properties, body):
         ch.basic_ack(delivery_tag=method.delivery_tag)
         return
 
-    model = MLModelService.get_model_by_id(mltask.model_id, session)
+    model = MLModelService.get_model_by_id(mltask.modelid, session)
     if not model:
-        logging.error(f"Model {mltask.model_id} not found")
+        logging.error(f"Model {mltask.modelid} not found")
         MLTaskService.update_task_status(mltask, 'failed', session)
         session.close()
         ch.basic_ack(delivery_tag=method.delivery_tag)
@@ -68,7 +68,7 @@ def predict_callback(ch, method, properties, body):
 
         prediction_history_data = {
             "task_id": mltask.task_id,
-            "model_id": mltask.model_id,
+            "modelid": mltask.modelid,
             "input_data": mltask.input_data,
             "output_data": mltask.output_data
         }
@@ -119,6 +119,10 @@ RABBITMQ_PORT = 5672
 RABBITMQ_USER = os.getenv('RABBITMQ_USER')
 RABBITMQ_PASSWORD = os.getenv('RABBITMQ_PASSWORD')
 
+logging.info(f"Connecting to RabbitMQ at {RABBITMQ_HOST} with user {RABBITMQ_USER}")
+
+RABBITMQ_USER='rmuser'
+RABBITMQ_PASS='rmpassword'
 
 def start_worker():
     connection_params = pika.ConnectionParameters(

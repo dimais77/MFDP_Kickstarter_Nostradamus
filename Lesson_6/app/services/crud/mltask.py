@@ -3,7 +3,7 @@ from services.crud import mlmodel as ModelService
 from services.crud import prediction as PredictionService
 from typing import Optional, Any
 from fastapi import HTTPException
-from models.wineparams import WineParams
+from models.project_params import ProjectParams
 from pydantic import BaseModel
 import logging
 import json
@@ -47,29 +47,29 @@ def get_prediction(task: MLTask, session) -> str:
     model = ModelService.get_model_by_id(task.model_id, session)
     if not model:
         raise HTTPException(status_code=404, detail="Model not found")
-    model_path = Path(__file__).parent.parent.parent / 'data' / 'model.pkl'
+    model_path = Path(__file__).parent.parent.parent / 'data' / 'lr_model.joblib'
     if not model_path.is_file():
         raise FileNotFoundError(f"Model file not found at {model_path}")
     mlmodel = joblib.load(model_path)
     logging.info(f"Model loaded {model_path}")
     try:
         input_data_dict = json.loads(task.input_data)
-        input_data_obj = WineParams(**input_data_dict)
+        input_data_obj = ProjectParams(**input_data_dict)
         input_data_df = pd.DataFrame([input_data_obj.to_list()],
                                      columns=input_data_dict.keys())
 
-        logging.info("Model received wine params for prediction.")
+        logging.info("Model received  params for prediction.")
 
         prediction = mlmodel.predict(input_data_df)
         predicted_quality = int(prediction[0])
         if predicted_quality == 1:
-            output_data = 'Good wine'
+            output_data = 'Success'
         else:
-            output_data = 'Bad wine'
+            output_data = 'Failure'
 
-        logging.info(f"Predicted wine quality: '{output_data}'")
+        logging.info(f"Predicted: '{output_data}'")
 
-        output_data = json.dumps({"predicted_quality": output_data})
+        output_data = json.dumps({"predicted": output_data})
         task.output_data = output_data
         update_task_status(task, 'completed', session)
 

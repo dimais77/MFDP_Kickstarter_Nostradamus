@@ -12,6 +12,9 @@ RABBITMQ_HOST = os.getenv('RABBITMQ_HOST')
 RABBITMQ_USER = os.getenv("RABBITMQ_USER")
 RABBITMQ_PASS = os.getenv("RABBITMQ_PASS")
 
+RABBITMQ_USER='rmuser'
+RABBITMQ_PASS='rmpassword'
+
 connection_params = pika.ConnectionParameters(
     host=RABBITMQ_HOST,
     port=5672,

@@ -3,7 +3,7 @@ import requests
 import jwt
 import logging
 import time
-from jose import jwt
+# from jose import jwt
 from dotenv import load_dotenv
 import os
 
@@ -44,10 +44,8 @@ def verify_access_token(token):
         return True
     except jwt.ExpiredSignatureError:
         logging.error("Token has expired")
-        return False
-    except jwt.InvalidTokenError:
-        logging.error("Invalid token")
-        return False
+    except jwt.InvalidTokenError as e:
+        logging.error(f"Invalid token: {e}")
 
 
 def logout():
@@ -58,10 +56,10 @@ def logout():
 
 
 def main_page():
-    st.title("Добро пожаловать в наш сервис «Кикстартерный Нострадамус»")
-    st.write(f"- это система прогнозирования "
-             f"успеха стартапов на платформе Kickstarter "
-             f"с использованием машинного обучения. ")
+    st.title("Добро пожаловать в наш сервис «Кикстартерный Нострадамус» 🔮")
+    st.write(f"система прогнозирования 📈📉"
+             f"успеха стартапов на платформе Kickstarter 🎰 "
+             f"с использованием машинного обучения 💻")
     st.header("Аутентификация ☑️")
     username = st.text_input("Логин", key="user_login")
     password = st.text_input("Пароль", type="password", key="user_password")
@@ -79,10 +77,13 @@ def main_page():
             st.rerun()
         else:
             st.error("Ошибка аутентификации")
-        st.session_state['redirect_to'] = "Личный кабинет пользователя"
+
+        st.session_state['redirect_to'] = "Личный кабинет"
         st.rerun()
+
     if st.button("Перейти к регистрации"):
         st.session_state['redirect_to'] = "Регистрация"
+        st.rerun()
 
 
 def registration_page():
@@ -93,7 +94,7 @@ def registration_page():
     email = st.text_input("Email", key="new_user_email")
     st.session_state['Email'] = email
     password = st.text_input("Пароль", type="password",
-                             key="new_user_paswword")
+                             key="new_user_password")
     st.session_state['Пароль'] = password
     if st.button("Зарегистрироваться"):
         response = requests.post(f"{api_url}/user/signup",
@@ -114,12 +115,12 @@ def registration_page():
                 st.session_state['username'] = username
                 st.session_state['logged_in'] = True
                 st.session_state['redirect_to'] = "Личный кабинет"
+                st.rerun()
             else:
                 st.error(
                     "Ошибка при получении username из ответа на регистрацию")
-            st.session_state['redirect_to'] = "Главная"
-            st.rerun()
-
+            # st.session_state['redirect_to'] = "Главная"
+            # st.rerun()
 
 def user_dashboard():
     st.title("Личный кабинет")
@@ -143,7 +144,6 @@ def user_dashboard():
     if response_username.status_code == 200:
         user_data = response_username.json()
         user_id = user_data.get('id')
-        # user_id = st.session_state['user_id']
 
     response = requests.get(f"{api_url}/user/balance/{user_id}")
 
@@ -177,7 +177,7 @@ def user_dashboard():
 
 def ml_service_page():
     st.title("ML Сервис")
-    st.write(f" Стоимость предсказания:  50 кредитов 💸")
+    st.write(f"Стоимость предсказания:  50 кредитов 💸")
     if 'token' not in st.session_state or 'user_id' not in st.session_state:
         st.error("Пожалуйста, войдите в систему для доступа к ML сервису")
         st.stop()
@@ -203,17 +203,23 @@ def ml_service_page():
             model_id = json_response.get('model_id', 'N/A')
             st.session_state['model_id'] = model_id
             st.success("Модель успешно загружена!")
-
         else:
             st.error("Ошибка загрузки модели")
 
+    if 'model_id' not in st.session_state:
+        st.error("Сначала загрузите модель")
+        return
+
+    model_id = st.session_state['model_id']
+
     st.header("Kickstarter Nostradamus")
-    blurb = st.input('Описание', 'Co-devised by Meg Wilson and Molly Walker')
-    currency = st.input('Валюта', 'GBP')
-    goal = st.number_input('Цель', 650)
-    campaign_duration = st.number_input('Продолжительность', 29)
+
+    blurb = st.text_input('Описание', 'Chill Magazine is a woman run, print-only literary art magazine for chillers. We need help bringing our third issue to life!')
+    currency = st.text_input('Валюта', 'USD')
+    goal = st.number_input('Цель', 3500)
+    campaign_duration = st.number_input('Продолжительность', 30)
     started_month = st.number_input('Месяц старта', 7)
-    category_subcategory = st.input('Категория', 'Theater Plays')
+    category_subcategory = st.text_input('Категория', 'Publishing Art Books')
 
     if st.button('Загрузить данные'):
         user_id = st.session_state['user_id']
@@ -228,31 +234,43 @@ def ml_service_page():
             'started_month': started_month,
             'category_subcategory': category_subcategory
         }
-        response = requests.post(f"{api_url}/task/newtask",
-                                 json={"user_id": user_id,
-                                       "model_id": model_id,
-                                       "input_data": input_data})
-        if response.status_code == 200:
-            json_response = response.json()
-            task_id = json_response.get('task_id', 'N/A')
-            st.session_state['task_id'] = task_id
-            st.success(f"Задание успешно отправлено!")
-            st.rerun()
-        else:
-            st.error("Ошибка при отправке задания")
 
-    if st.button('Predict Quality'):
-        response = requests.get(f"{api_url}/task/prediction/{task_id}")
-        if response.status_code == 200:
-            json_response = response.json()
-            if 'output_data' in json_response:
-                output_data = json_response['output_data']
+        url = f"{api_url}/task/newtask"
+        params = {
+            "user_id": user_id,
+            "model_id": model_id,
+        }
+
+        try:
+            response = requests.post(url, params=params, json=input_data)
+            # st.write("Ответ сервера (raw text):", response.text)
+            if response.status_code == 200:
+                json_response = response.json()
+                task_id = json_response.get('task_id', 'N/A')
+                st.session_state['task_id'] = task_id
+                st.session_state['model_id'] = model_id
+                st.success(f"Задание успешно отправлено, task_id: {task_id}, model_id: {model_id}")
             else:
-                st.write("Ошибка: Нет данных о качестве предсказания")
-            logging.info(f"Предсказание успешно получено!")
-            st.success(f"Рекомендация: {output_data}")
+                st.error(f"Ошибка при отправке задания: {response.status_code}")
+                st.write(response.text)
+
+        except requests.exceptions.RequestException as e:
+            st.error(f"Ошибка соединения с API: {e}")
+
+    if st.button('Predict Success'):
+        task_id = st.session_state.get('task_id')
+        url = f"{api_url}/task/prediction/{task_id}"
+
+        if task_id:
+            response = requests.get(url)
+            if response.status_code == 200:
+                json_response = response.json()
+                output_data = json_response.get('output_data', 'Нет данных')
+                st.success(f"Рекомендация: {output_data}")
+            else:
+                st.error("Ошибка при получении предсказания")
         else:
-            st.error("Ошибка при получении предсказания")
+            st.error("Task ID не найден. Сначала загрузите данные.")
 
     st.header("История запросов и предсказаний ")
     response = requests.get(f"{api_url}/prediction/{user_id}")
@@ -292,7 +310,6 @@ def main():
         user_dashboard()
     else:
         main_page()
-
 
 if __name__ == "__main__":
     main()

@@ -1,15 +1,18 @@
-version: "3"
-services: 
+#version: "3"
+
+services:
   app:
     build: ./app/
-    image: event-planner-api:latest 
     env_file:
-    - ./app/.env
+      - ./app/.env
     volumes:
       - ./app:/app
     depends_on:
       - db
-  web:
+    links:
+      - db
+
+  web-proxy:
     build: ./nginx
     ports:
       - 80:80
@@ -21,8 +24,9 @@ services:
   rabbitmq:
     image: rabbitmq:3-management
     environment:
-      RABBITMQ_DEFAULT_USER: ${RABBITMQ_DEFAULT_USER}
-      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_DEFAULT_PASS}
+      RABBITMQ_DEFAULT_USER: rmuser
+      RABBITMQ_DEFAULT_PASS: rmpassword
+      RABBITMQ_HOST: rabbitmq
     ports:
       - "15672:15672"
       - "5672:5672"
@@ -30,13 +34,13 @@ services:
       - ./rabbitmq/mount:/var/lib/rabbitmq
     env_file:
       - ./rabbitmq/.env
-    restart: on-failure
 
+    restart: on-failure
 
   db:
     image: postgres:16-alpine
     volumes:
-      - ./postgres_data:/var/lib/postgresql/data/
+      - ./postgres_data:/var/lib/postgresql/data
     expose:
       - 5432
     environment:
@@ -44,16 +48,40 @@ services:
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
       - POSTGRES_DB=sa
 
+
   worker:
     build: ./app/
     image: worker
     environment:
-      RABBITMQ_USER: ${RABBITMQ_USER}
-      RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD}
-      RABBITMQ_HOST: ${RABBITMQ_HOST}
+      RABBITMQ_USER: rmuser
+      RABBITMQ_PASSWORD: rmpassword
+      RABBITMQ_HOST: rabbitmq
     restart: always
     volumes:
       - ./app:/app
     working_dir: /app
     env_file:
       - ./app/.env
+
+
+    command: python -u worker.py
+    depends_on:
+      - rabbitmq
+
+  webui:
+    build: ./webview/
+    image: webview
+    environment:
+      RABBITMQ_USER: rmuser
+      RABBITMQ_PASSWORD: rmpassword
+      RABBITMQ_HOST: rabbitmq
+    volumes:
+      - ./webview:/webview
+    ports:
+      - 8501:8501
+    working_dir: /webview
+    env_file:
+      - ./webview/.env
+
+    depends_on:
+      - app
