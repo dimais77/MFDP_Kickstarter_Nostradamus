@@ -6,5 +6,6 @@ rabbitmq/*
 !rabbitmq/.gitkeep
 app/data/*
 !app/data/.gitkeep
+!app/data/lr_model.joblib
 **/__pycache__/
 **/.env
