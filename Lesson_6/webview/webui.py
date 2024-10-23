@@ -3,6 +3,7 @@ import requests
 import jwt
 import logging
 import time
+# from jose import jwt
 from dotenv import load_dotenv
 import os
 
@@ -118,6 +119,8 @@ def registration_page():
             else:
                 st.error(
                     "Ошибка при получении username из ответа на регистрацию")
+            # st.session_state['redirect_to'] = "Главная"
+            # st.rerun()
 
 def user_dashboard():
     st.title("Личный кабинет")
