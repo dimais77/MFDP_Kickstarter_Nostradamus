@@ -9,7 +9,7 @@ from services.crud import mlmodel as MLModelService
 from publisher import publish_message
 import logging
 from dotenv import load_dotenv
-import os
+import time
 
 load_dotenv()
 
@@ -115,43 +115,52 @@ def save_prediction_callback(ch, method, properties, body):
 
 
 RABBITMQ_HOST = os.getenv('RABBITMQ_HOST')
-RABBITMQ_PORT = 5672
+RABBITMQ_PORT = os.getenv('RABBITMQ_PORT')
 RABBITMQ_USER = os.getenv('RABBITMQ_USER')
-RABBITMQ_PASSWORD = os.getenv('RABBITMQ_PASSWORD')
+RABBITMQ_PASS = os.getenv('RABBITMQ_PASS')
 
 logging.info(f"Connecting to RabbitMQ at {RABBITMQ_HOST} with user {RABBITMQ_USER}")
 
-RABBITMQ_USER='rmuser'
-RABBITMQ_PASS='rmpassword'
-
 def start_worker():
-    connection_params = pika.ConnectionParameters(
-        host=RABBITMQ_HOST,
-        port=RABBITMQ_PORT,
-        virtual_host='/',
-        credentials=pika.PlainCredentials(
-            username=RABBITMQ_USER,
-            password=RABBITMQ_PASSWORD,
-        ),
-        heartbeat=30,
-        blocked_connection_timeout=2
-    )
+    retries = 5
+    delay = 5
 
-    connection = pika.BlockingConnection(connection_params)
+    for i in range(retries):
+        try:
+            logging.info(f"Попытка {i + 1} подключения к RabbitMQ")
 
-    channel = connection.channel()
-    channel.queue_declare(queue='ml_tasks')
-    channel.queue_declare(queue='prediction_history')
+            connection_params = pika.ConnectionParameters(
+                host=RABBITMQ_HOST,
+                port=RABBITMQ_PORT,
+                virtual_host='/',
+                credentials=pika.PlainCredentials(
+                    username=RABBITMQ_USER,
+                    password=RABBITMQ_PASS,
+                ),
+                heartbeat=30,
+                blocked_connection_timeout=2
+            )
 
-    channel.basic_consume(queue='ml_tasks',
-                          on_message_callback=predict_callback)
-    channel.basic_consume(queue='prediction_history',
-                          on_message_callback=save_prediction_callback)
+            connection = pika.BlockingConnection(connection_params)
 
-    logging.info(' [*] Waiting for messages. To exit press CTRL+C')
-    print(' [*] Waiting for messages. To exit press CTRL+C')
-    channel.start_consuming()
+            channel = connection.channel()
+            channel.queue_declare(queue='ml_tasks')
+            channel.queue_declare(queue='prediction_history')
 
+            channel.basic_consume(queue='ml_tasks', on_message_callback=predict_callback)
+            channel.basic_consume(queue='prediction_history', on_message_callback=save_prediction_callback)
+
+            logging.info(' [*] Ожидание сообщений. Для выхода нажмите CTRL+C')
+            channel.start_consuming()
+
+        except pika.exceptions.AMQPConnectionError as e:
+            logging.error(f"Ошибка подключения к RabbitMQ: {e}")
+            if i < retries - 1:
+                time.sleep(delay)
+                delay *= 2
+            else:
+                logging.error("Не удалось подключиться к RabbitMQ после нескольких попыток")
+                raise Exception("Не удалось подключиться к RabbitMQ")
 
 if __name__ == '__main__':
     start_worker()

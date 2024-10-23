@@ -3,7 +3,6 @@ import requests
 import jwt
 import logging
 import time
-# from jose import jwt
 from dotenv import load_dotenv
 import os
 
@@ -119,8 +118,6 @@ def registration_page():
             else:
                 st.error(
                     "Ошибка при получении username из ответа на регистрацию")
-            # st.session_state['redirect_to'] = "Главная"
-            # st.rerun()
 
 def user_dashboard():
     st.title("Личный кабинет")
@@ -216,9 +213,12 @@ def ml_service_page():
 
     blurb = st.text_input('Описание', 'Chill Magazine is a woman run, print-only literary art magazine for chillers. We need help bringing our third issue to life!')
     currency = st.text_input('Валюта', 'USD')
-    goal = st.number_input('Цель', 3500)
-    campaign_duration = st.number_input('Продолжительность', 30)
-    started_month = st.number_input('Месяц старта', 7)
+    goal = st.number_input('Цель', min_value=1, value=3500,
+                                    step=1)
+    campaign_duration = st.number_input('Продолжительность', min_value=1, value=30,
+                                    step=1)
+    started_month = st.number_input('Месяц старта', min_value=1, value=7, max_value=12,
+                                    step=1)
     category_subcategory = st.text_input('Категория', 'Publishing Art Books')
 
     if st.button('Загрузить данные'):
@@ -269,6 +269,7 @@ def ml_service_page():
                 st.success(f"Рекомендация: {output_data}")
             else:
                 st.error("Ошибка при получении предсказания")
+
         else:
             st.error("Task ID не найден. Сначала загрузите данные.")
 
